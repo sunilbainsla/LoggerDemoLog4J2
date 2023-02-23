@@ -34,18 +34,18 @@ public class OrderController {
     public List<OrderItem> getOrderItems(
             @PathVariable("orderNumber") @Required String orderNumber,
             @PathVariable("retailer") @Required String retailer) {
-
+        logger.info("start the values");
         try (final CloseableThreadContext.Instance ignored = CloseableThreadContext
                 .put("orderNumber", orderNumber)
                 .put("retailer", retailer)) {
-            logger.info("start the values");
+
             MDC.clear();
-            logger.info("after the values");
+
             MDC.put("orderNumber", orderNumber);
             MDC.put("retailer", retailer) ;
 
 
-
+            logger.info("after the values");
 
             List<OrderItem> orderItems = null;
             try {
