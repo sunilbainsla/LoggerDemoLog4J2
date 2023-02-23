@@ -6,12 +6,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class StructuredLoggingDemoApplication {
-	private static final Logger logger = LogManager.getLogger(StructuredLoggingDemoApplication.class);
+public class JsonLoggingDemoApplication {
+	private static final Logger logger = LogManager.getLogger(JsonLoggingDemoApplication.class);
 	public static void main(String[] args) {
 
 		logger.info("test");
-		SpringApplication.run(StructuredLoggingDemoApplication.class, args);
+		SpringApplication.run(JsonLoggingDemoApplication.class, args);
 	}
 
 }
