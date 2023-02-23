@@ -38,15 +38,18 @@ public class OrderController {
         try (final CloseableThreadContext.Instance ignored = CloseableThreadContext
                 .put("orderNumber", orderNumber)
                 .put("retailer", retailer)) {
+            logger.info("start the values");
+            MDC.clear();
+            logger.info("after the values");
+            MDC.put("orderNumber", orderNumber);
+            MDC.put("retailer", retailer) ;
 
-            // MDC.put("orderNumber", orderNumber);
-            // MDC.put("retailer", retailer) ;
 
-            logger.info("Getting items");
+
 
             List<OrderItem> orderItems = null;
             try {
-
+           logger.info("Checking the values");
                 orderItems = d.getItemsForOrder(orderNumber);
 
             } catch (Exception ex) {
