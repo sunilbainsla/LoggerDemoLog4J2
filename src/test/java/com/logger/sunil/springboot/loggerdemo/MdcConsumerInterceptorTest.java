@@ -58,4 +58,30 @@ public class MdcConsumerInterceptorTest {
 			assert(mdc.get("user").equals("jdoe"));
 		});
 	}
+
+	@Test
+	public void testInterceptor() {
+		// create interceptor
+		MdcConsumerInterceptor<String, String> interceptor = new MdcConsumerInterceptor<>();
+
+		// create test record
+		ConsumerRecord<String, String> record = new ConsumerRecord<>("test-topic", 0, 0, "key", "value");
+
+		// create test records
+		ConsumerRecords<String, String> records = new ConsumerRecords<>(Collections.singletonMap(
+				new TopicPartition("test-topic", 0), Collections.singletonList(record)));
+
+		// apply interceptor to records
+		ConsumerRecords<String, String> interceptedRecords = interceptor.onConsume(records);
+
+		// assert that intercepted records is not null and has at least one element
+		assertNotNull(interceptedRecords);
+		assertFalse(interceptedRecords.isEmpty());
+
+		// assert that MDC context was set for intercepted records
+		for (ConsumerRecord<String, String> interceptedRecord : interceptedRecords) {
+			assertNotNull(interceptedRecord.headers().lastHeader("mdc"));
+		}
+	}
+
 }
