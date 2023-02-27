@@ -5,6 +5,12 @@ Configuration:
       name: "ConsoleAppender"
       target: "SYSTEM_OUT"
       follow: "true"
+      RewritePolicy:
+        KeyValuePairRewrite:
+          event: KeyValuePair
+          key: "value"
+          pattern: "null|\\s*"
+          action: "null"
       JsonLayout:
         complete: "false"
         compact: "false"
@@ -18,6 +24,7 @@ Configuration:
           -
             "key": "Retailer"
             "value": "${ctx:retailer}"
+
   Loggers:
     Root:
       level: "info"
