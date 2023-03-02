@@ -1,50 +1,60 @@
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.slf4j.MDC;
+import org.springframework.core.serializer.Deserializer;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
-public class MdcConsumerInterceptorTest {
+class MDCConsumerInterceptorTest {
 
-	private static final Logger LOG = LoggerFactory.getLogger(MdcConsumerInterceptorTest.class);
+	@Mock
+	Deserializer<String> mockStringDeserializer;
 
-	@Test
-	void testInterceptor() {
-		MdcConsumerInterceptor<byte[], byte[]> interceptor = new MdcConsumerInterceptor<>();
-		Map<String, String> props = new HashMap<>();
-		interceptor.configure(props);
-
-		String orderNumber = "12345";
-		String retailer = "Amazon";
-
-		Map<String, String> mdc = new HashMap<>();
-		mdc.put("OrderNumber", orderNumber);
-		mdc.put("Retailer", retailer);
-
-		ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>("my-topic", 0, 0, "key".getBytes(),
-				"value".getBytes());
-
-		List<ConsumerRecord<byte[], byte[]>> records = Collections.singletonList(record);
-		List<ConsumerRecord<byte[], byte[]>> interceptedRecords = interceptor.onConsume(records);
-
-		assertEquals(records.size(), interceptedRecords.size());
-
-		ConsumerRecord<byte[], byte[]> interceptedRecord = interceptedRecords.get(0);
-		assertEquals(record.key(), interceptedRecord.key());
-		assertEquals(record.value(), interceptedRecord.value());
-
-		Map<String, String> interceptedMdc = MDC.getCopyOfContextMap();
-		assertTrue(interceptedMdc.containsKey("OrderNumber"));
-		assertTrue(interceptedMdc.containsKey("Retailer"));
-		assertEquals(orderNumber, interceptedMdc.get("OrderNumber"));
-		assertEquals(retailer, interceptedMdc.get("Retailer"));
+	@BeforeEach
+	void setUp() {
+		MockitoAnnotations.openMocks(this);
 	}
 
+	@Test
+	void testOnConsume() {
+		// Create a test ConsumerRecord
+		String topic = "test-topic";
+		int partition = 0;
+		byte[] key = "test-key".getBytes();
+		byte[] value = "test-value".getBytes();
+		ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, partition, 0L, key, value);
+
+		// Create a test ConsumerRecords object with the record
+		Map<TopicPartition, ConsumerRecords<byte[], byte[]>> recordsMap = new HashMap<>();
+		TopicPartition topicPartition = new TopicPartition(topic, partition);
+		ConsumerRecords<byte[], byte[]> records = new ConsumerRecords<>(Collections.singletonMap(topicPartition, Collections.singletonList(record)));
+		recordsMap.put(topicPartition, records);
+
+		// Mock the deserializer to return a string for the test key
+		String expectedMdcValue = "test-key-string";
+		when(mockStringDeserializer.deserialize(topic, key)).thenReturn(expectedMdcValue);
+
+		// Set up the MDCConsumerInterceptor for testing
+		MDCConsumerInterceptor<byte[], byte[]> interceptor = new MDCConsumerInterceptor<>();
+		interceptor.stringDeserializer = mockStringDeserializer;
+
+		// Call the onConsume method with the test records
+		ConsumerRecords<byte[], byte[]> result = interceptor.onConsume(records);
+
+		// Verify that the MDC was updated with the expected value for the test record
+		String actualMdcValue = MDC.get("key");
+		assertEquals(expectedMdcValue, actualMdcValue);
+
+		// Verify that the original records object was returned unchanged
+		assertEquals(recordsMap, result);
+	}
 }
