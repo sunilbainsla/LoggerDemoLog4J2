@@ -1,19 +1,52 @@
-import net.minidev.json.*;
+public class SoapLoggingHandler implements SOAPHandler<SOAPMessageContext> {
 
-// Parse the JSON string into a JSONObject
-String jsonString = "{\"eventsource\":\"topicname\",\"data\":\"{\\\"orgid\\\":\\\"test\\\",\\\"data\\\":{\\\"relationship\\\":{\\\"payment\\\":{\\\"data\\\":[{\\\"id\\\":\\\"123\\\"}]}}}}\"}";
-		JSONObject json = (JSONObject) JSONValue.parse(jsonString);
+	private static final String MDC_PROTOCOL_KEY = "requestProtocol";
+	private static final String MDC_ACTION_KEY = "soapAction";
 
-		// Get the "data" object
-		JSONObject data = (JSONObject) json.get("data");
+	@Override
+	public Set<QName> getHeaders() {
+		return null;
+	}
 
-		// Get the "data" object inside the "relationship" object
-		JSONObject relationshipData = (JSONObject) data.get("data");
-		relationshipData = (JSONObject) relationshipData.get("relationships");
-		relationshipData = (JSONObject) relationshipData.get("payment");
-		relationshipData = ((JSONArray) relationshipData.get("data")).getJSONObject(0);
+	@Override
+	public boolean handleMessage(SOAPMessageContext context) {
+		Boolean isOutbound = (Boolean) context.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY);
+		if (!isOutbound) {
+			// incoming message
+			try {
+				SOAPMessage message = context.getMessage();
+				SOAPBody body = message.getSOAPBody();
+				String action = context.getSOAPAction();
+				MDC.put(MDC_ACTION_KEY, action);
+				MDC.put(MDC_PROTOCOL_KEY, "SOAP");
+			} catch (SOAPException e) {
+				e.printStackTrace();
+			}
+		} else {
+			// outgoing message
+			MDC.put(MDC_PROTOCOL_KEY, "SOAP");
+		}
+		return true;
+	}
 
-		// Get the value of the "id" field
-		String id = (String) relationshipData.get("id");
+	@Override
+	public boolean handleFault(SOAPMessageContext context) {
+		return true;
+	}
 
-		System.out.println(id); // Output: 123
+	@Override
+	public void close(MessageContext context) {
+	}
+}
+
+
+
+
+
+
+
+......
+
+		SoapLoggingHandler soapHandler = new SoapLoggingHandler();
+		BindingProvider bindingProvider = (BindingProvider) port;
+		bindingProvider.getBinding().setHandlerChain(Collections.singletonList(soapHandler));

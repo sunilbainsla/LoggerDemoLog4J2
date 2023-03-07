@@ -1,27 +1,43 @@
-package com.logger.sunil.springboot.loggerdemo;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.kafka.clients.consumer.ConsumerInterceptor;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.MDC;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+import org.springframework.core.serializer.Deserializer;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
-public class ServiceInterceptor extends HandlerInterceptorAdapter {
+public class MDCConsumerInterceptor<K, V> implements ConsumerInterceptor<K, V> {
 
-    private static final Logger logger = LogManager.getLogger(ServiceInterceptor.class);
+    private static final String MDC_TOPIC_KEY = "kafka.topic";
+    private static final String MDC_PARTITION_KEY = "kafka.partition";
+  Deserializer<String> stringDeserializer;
+    @Override
+    public ConsumerRecords<K, V> onConsume(ConsumerRecords<K, V> records) {
+        Map<TopicPartition, OffsetAndMetadata> offsets = null;
+
+
+
+        for (ConsumerRecord<K, V> record : records.records(topicPartition)) {
+            MDC.put("key",stringDeserializer.deserialize(record.topic(),(byte[])record.key()));
+        }
+
+
+        return records;
+}
 
     @Override
+    public void onCommit(Map<TopicPartition, OffsetAndMetadata> offsets) {
+        // Do something on commit
+    }
 
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object object) throws Exception {
-        MDC.clear();
-        MDC.put("userId", request.getHeader("UserId"));
+    @Override
+    public void close() {
+        // Close the interceptor
+    }
 
-        MDC.put("sessionId ", request.getHeader("SessionId"));
-
-        MDC.put("requestId", request.getHeader("RequestId"));
-
-return true;
-}
+    @Override
+    public void configure(Map<String, ?> configs) {
+        // Configure the interceptor
+    }
 }

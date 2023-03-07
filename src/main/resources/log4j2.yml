@@ -1,0 +1,28 @@
+Configuration:
+  status: "INFO"
+  Appenders:
+    Console:
+      name: "ConsoleAppender"
+      target: "SYSTEM_OUT"
+      follow: "true"
+      JsonLayout:
+        complete: "false"
+        compact: "false"
+        eventEol: "true"
+        properties: "true"
+        objectMessageAsJsonObject: "true"
+        KeyValuePair:
+          -
+            "key": "OrderNumber"
+            "value": "$${ctx:orderNumber:-}"
+          -
+            "key": "Retailer"
+            "value": "${ctx:retailer}"
+          -
+            "key": "timestamp"
+            "value": "%d{yyyy-MM-dd HH:mm:ss.SSS}"
+  Loggers:
+    Root:
+      level: "info"
+      AppenderRef:
+        ref: "ConsoleAppender"
