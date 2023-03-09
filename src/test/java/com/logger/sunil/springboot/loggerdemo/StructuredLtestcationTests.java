@@ -22,32 +22,58 @@ import org.springframework.ws.client.support.interceptor.ClientInterceptorAdapte
 		import org.springframework.ws.soap.SoapMessage;
 		import org.springframework.ws.soap.client.core.SoapActionCallback;
 
+		import org.slf4j.MDC;
+		import org.springframework.ws.client.support.interceptor.ClientInterceptorAdapter;
+		import org.springframework.ws.context.MessageContext;
+		import org.springframework.ws.soap.SoapHeaderElement;
+		import org.springframework.ws.soap.SoapMessage;
+
 public class SoapRequestInterceptor extends ClientInterceptorAdapter {
 
 	@Override
 	public boolean handleRequest(MessageContext messageContext) throws IOException {
 		SoapMessage soapMessage = (SoapMessage) messageContext.getRequest();
-		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageId.getText();
-		System.out.println("Sending SOAP request message with MessageID: " + messageIdValue);
+		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageIdHeader.getText();
+
+		// Add MessageID value to MDC context
+		MDC.put("MessageID", messageIdValue);
+
+		// Log SOAP request message
+		String logMessage = "Sending SOAP request message with MessageID: " + messageIdValue;
+		System.out.println(logMessage);
 		return true;
 	}
 
 	@Override
 	public boolean handleResponse(MessageContext messageContext) throws IOException {
 		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
-		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageId.getText();
-		System.out.println("Received SOAP response message with MessageID: " + messageIdValue);
+		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageIdHeader.getText();
+
+		// Add MessageID value to MDC context
+		MDC.put("MessageID", messageIdValue);
+
+		// Log SOAP response message
+		String logMessage = "Received SOAP response message with MessageID: " + messageIdValue;
+		System.out.println(logMessage);
 		return true;
 	}
 
 	@Override
 	public boolean handleFault(MessageContext messageContext) throws IOException {
 		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
-		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageId.getText();
-		System.out.println("Received SOAP fault message with MessageID: " + messageIdValue);
+		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageIdHeader.getText();
+
+		// Add MessageID value to MDC context
+		MDC.put("MessageID", messageIdValue);
+
+		// Log SOAP fault message
+		String logMessage = "Received SOAP fault message with MessageID: " + messageIdValue;
+		System.out.println(logMessage);
 		return true;
 	}
+}
+
 }
