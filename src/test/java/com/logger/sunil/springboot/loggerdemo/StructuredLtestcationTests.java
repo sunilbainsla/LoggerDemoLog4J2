@@ -1,52 +1,50 @@
-public class SoapLoggingHandler implements SOAPHandler<SOAPMessageContext> {
-
-	private static final String MDC_PROTOCOL_KEY = "requestProtocol";
-	private static final String MDC_ACTION_KEY = "soapAction";
-
-	@Override
-	public Set<QName> getHeaders() {
-		return null;
-	}
-
-	@Override
-	public boolean handleMessage(SOAPMessageContext context) {
-		Boolean isOutbound = (Boolean) context.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY);
-		if (!isOutbound) {
-			// incoming message
-			try {
-				SOAPMessage message = context.getMessage();
-				SOAPBody body = message.getSOAPBody();
-				String action = context.getSOAPAction();
-				MDC.put(MDC_ACTION_KEY, action);
-				MDC.put(MDC_PROTOCOL_KEY, "SOAP");
-			} catch (SOAPException e) {
-				e.printStackTrace();
-			}
-		} else {
-			// outgoing message
-			MDC.put(MDC_PROTOCOL_KEY, "SOAP");
+public void sendAndReceive(Object request) {
+		MyMessageCallback callback = new MyMessageCallback();
+		List<EndpointInterceptor> interceptors = new ArrayList<>();
+		interceptors.add(new MyEndpointInterceptor());
+		getWebServiceTemplate().setInterceptors(interceptors.toArray(new EndpointInterceptor[interceptors.size()]));
+		getWebServiceTemplate().marshalSendAndReceive(request, callback);
 		}
+
+		}
+
+
+
+
+public class MyEndpointInterceptor extends AbstractEndpointInterceptor {
+
+	private static final Logger logger = LoggerFactory.getLogger(MyEndpointInterceptor.class);
+
+	@Override
+	public boolean handleRequest(MessageContext messageContext, Object endpoint) throws Exception {
+		MDC.put("requestId", messageContext.getRequest().getPayloadSource().toString());
 		return true;
 	}
 
 	@Override
-	public boolean handleFault(SOAPMessageContext context) {
+	public boolean handleResponse(MessageContext messageContext, Object endpoint) throws Exception {
+		String requestId = MDC.get("requestId");
+		logger.info("SOAP response for request {}: {}", requestId, messageContext.getResponse().getPayloadSource().toString());
 		return true;
 	}
 
-	@Override
-	public void close(MessageContext context) {
-	}
 }
 
+public class MyEndpointInterceptor extends AbstractEndpointInterceptor {
 
+	private static final Logger logger = LoggerFactory.getLogger(MyEndpointInterceptor.class);
 
+	@Override
+	public boolean handleRequest(MessageContext messageContext, Object endpoint) throws Exception {
+		MDC.put("requestId", messageContext.getRequest().getPayloadSource().toString());
+		return true;
+	}
 
+	@Override
+	public boolean handleResponse(MessageContext messageContext, Object endpoint) throws Exception {
+		String requestId = MDC.get("requestId");
+		logger.info("SOAP response for request {}: {}", requestId, messageContext.getResponse().getPayloadSource().toString());
+		return true;
+	}
 
-
-
-......
-
-		SoapLoggingHandler soapHandler = new SoapLoggingHandler();
-		BindingProvider bindingProvider = (BindingProvider) port;
-		bindingProvider.getBinding().setHandlerChain(Collections.singletonList(soapHandler));
+}
