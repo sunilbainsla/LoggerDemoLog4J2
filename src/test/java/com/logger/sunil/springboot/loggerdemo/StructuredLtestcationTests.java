@@ -1,50 +1,53 @@
-public void sendAndReceive(Object request) {
-		MyMessageCallback callback = new MyMessageCallback();
-		List<EndpointInterceptor> interceptors = new ArrayList<>();
-		interceptors.add(new MyEndpointInterceptor());
-		getWebServiceTemplate().setInterceptors(interceptors.toArray(new EndpointInterceptor[interceptors.size()]));
-		getWebServiceTemplate().marshalSendAndReceive(request, callback);
-		}
+@Configuration
+public class SoapClientConfig {
 
-		}
-
-
-
-
-public class MyEndpointInterceptor extends AbstractEndpointInterceptor {
-
-	private static final Logger logger = LoggerFactory.getLogger(MyEndpointInterceptor.class);
-
-	@Override
-	public boolean handleRequest(MessageContext messageContext, Object endpoint) throws Exception {
-		MDC.put("requestId", messageContext.getRequest().getPayloadSource().toString());
-		return true;
+	@Bean
+	public SoapRequestInterceptor soapRequestInterceptor() {
+		return new SoapRequestInterceptor();
 	}
 
-	@Override
-	public boolean handleResponse(MessageContext messageContext, Object endpoint) throws Exception {
-		String requestId = MDC.get("requestId");
-		logger.info("SOAP response for request {}: {}", requestId, messageContext.getResponse().getPayloadSource().toString());
-		return true;
+	@Bean
+	public WebServiceTemplate webServiceTemplate() {
+		WebServiceTemplate webServiceTemplate = new WebServiceTemplate();
+		webServiceTemplate.setInterceptors(new ClientInterceptor[] { soapRequestInterceptor() });
+		return webServiceTemplate;
 	}
-
 }
 
-public class MyEndpointInterceptor extends AbstractEndpointInterceptor {
 
-	private static final Logger logger = LoggerFactory.getLogger(MyEndpointInterceptor.class);
+
+import org.springframework.ws.client.support.interceptor.ClientInterceptorAdapter;
+		import org.springframework.ws.context.MessageContext;
+		import org.springframework.ws.soap.SoapHeaderElement;
+		import org.springframework.ws.soap.SoapMessage;
+		import org.springframework.ws.soap.client.core.SoapActionCallback;
+
+public class SoapRequestInterceptor extends ClientInterceptorAdapter {
 
 	@Override
-	public boolean handleRequest(MessageContext messageContext, Object endpoint) throws Exception {
-		MDC.put("requestId", messageContext.getRequest().getPayloadSource().toString());
+	public boolean handleRequest(MessageContext messageContext) throws IOException {
+		SoapMessage soapMessage = (SoapMessage) messageContext.getRequest();
+		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageId.getText();
+		System.out.println("Sending SOAP request message with MessageID: " + messageIdValue);
 		return true;
 	}
 
 	@Override
-	public boolean handleResponse(MessageContext messageContext, Object endpoint) throws Exception {
-		String requestId = MDC.get("requestId");
-		logger.info("SOAP response for request {}: {}", requestId, messageContext.getResponse().getPayloadSource().toString());
+	public boolean handleResponse(MessageContext messageContext) throws IOException {
+		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
+		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageId.getText();
+		System.out.println("Received SOAP response message with MessageID: " + messageIdValue);
 		return true;
 	}
 
+	@Override
+	public boolean handleFault(MessageContext messageContext) throws IOException {
+		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
+		SoapHeaderElement messageId = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageId.getText();
+		System.out.println("Received SOAP fault message with MessageID: " + messageIdValue);
+		return true;
+	}
 }
