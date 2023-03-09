@@ -77,3 +77,28 @@ public class SoapRequestInterceptor extends ClientInterceptorAdapter {
 }
 
 }
+@Override
+public boolean handleResponse(MessageContext messageContext) throws IOException {
+
+		int statusCode = (int) messageContext.getProperty(MessageContext.HTTP_RESPONSE_CODE);
+
+		// Add the status code to the MDC context
+		MDC.put("StatusCode", String.valueOf(statusCode));
+
+		// Get the MessageID from the SOAP header
+		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
+		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
+		String messageIdValue = messageIdHeader.getText();
+
+		// Add the MessageID to the MDC context
+		MDC.put("MessageID", messageIdValue);
+
+		// Log the SOAP response message with the status code and MessageID
+		String logMessage = "Received SOAP response message with MessageID: " + messageIdValue + ", StatusCode: " + statusCode;
+		System.out.println(logMessage);
+		return true;
+		}
+		In the code above, the getProperty() method is used to retrieve the HTTP status code from the MessageContext object, and it is then converted to a string and added to the MDC context using
+
+
+
