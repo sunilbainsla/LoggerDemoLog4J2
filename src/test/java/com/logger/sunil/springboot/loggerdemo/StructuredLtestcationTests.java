@@ -1,104 +1,76 @@
-@Configuration
-public class SoapClientConfig {
+import java.io.StringWriter;
 
-	@Bean
-	public SoapRequestInterceptor soapRequestInterceptor() {
-		return new SoapRequestInterceptor();
-	}
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
-	@Bean
-	public WebServiceTemplate webServiceTemplate() {
-		WebServiceTemplate webServiceTemplate = new WebServiceTemplate();
-		webServiceTemplate.setInterceptors(new ClientInterceptor[] { soapRequestInterceptor() });
-		return webServiceTemplate;
-	}
-}
-
-
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ws.client.support.interceptor.ClientInterceptorAdapter;
-		import org.springframework.ws.context.MessageContext;
-		import org.springframework.ws.soap.SoapHeaderElement;
-		import org.springframework.ws.soap.SoapMessage;
-		import org.springframework.ws.soap.client.core.SoapActionCallback;
-
-		import org.slf4j.MDC;
-		import org.springframework.ws.client.support.interceptor.ClientInterceptorAdapter;
-		import org.springframework.ws.context.MessageContext;
-		import org.springframework.ws.soap.SoapHeaderElement;
-		import org.springframework.ws.soap.SoapMessage;
+import org.springframework.ws.context.MessageContext;
+import org.springframework.ws.soap.SoapMessage;
 
 public class SoapRequestInterceptor extends ClientInterceptorAdapter {
 
+	private static final Logger logger = LoggerFactory.getLogger(SoapRequestInterceptor.class);
+
 	@Override
-	public boolean handleRequest(MessageContext messageContext) throws IOException {
+	public boolean handleRequest(MessageContext messageContext) {
 		SoapMessage soapMessage = (SoapMessage) messageContext.getRequest();
-		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageIdHeader.getText();
+		String soapRequest = convertSoapMessageToString(soapMessage);
 
-		// Add MessageID value to MDC context
-		MDC.put("MessageID", messageIdValue);
+		// Log the SOAP request
+		logger.debug("SOAP request: {}", soapRequest);
 
-		// Log SOAP request message
-		String logMessage = "Sending SOAP request message with MessageID: " + messageIdValue;
-		System.out.println(logMessage);
-		return true;
+		return super.handleRequest(messageContext);
 	}
 
 	@Override
-	public boolean handleResponse(MessageContext messageContext) throws IOException {
+	public boolean handleResponse(MessageContext messageContext) {
 		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
-		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageIdHeader.getText();
+		String soapResponse = convertSoapMessageToString(soapMessage);
 
-		// Add MessageID value to MDC context
-		MDC.put("MessageID", messageIdValue);
+		// Log the SOAP response
+		logger.debug("SOAP response: {}", soapResponse);
 
-		// Log SOAP response message
-		String logMessage = "Received SOAP response message with MessageID: " + messageIdValue;
-		System.out.println(logMessage);
-		return true;
+		return super.handleResponse(messageContext);
 	}
 
-	@Override
-	public boolean handleFault(MessageContext messageContext) throws IOException {
-		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
-		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageIdHeader.getText();
-
-		// Add MessageID value to MDC context
-		MDC.put("MessageID", messageIdValue);
-
-		// Log SOAP fault message
-		String logMessage = "Received SOAP fault message with MessageID: " + messageIdValue;
-		System.out.println(logMessage);
-		return true;
-	}
-}
-
-}
-@Override
-public boolean handleResponse(MessageContext messageContext) throws IOException {
-
-		int statusCode = (int) messageContext.getProperty(MessageContext.HTTP_RESPONSE_CODE);
-
-		// Add the status code to the MDC context
-		MDC.put("StatusCode", String.valueOf(statusCode));
-
-		// Get the MessageID from the SOAP header
-		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
-		SoapHeaderElement messageIdHeader = soapMessage.getSoapHeader().examineHeaderElements("MessageID").next();
-		String messageIdValue = messageIdHeader.getText();
-
-		// Add the MessageID to the MDC context
-		MDC.put("MessageID", messageIdValue);
-
-		// Log the SOAP response message with the status code and MessageID
-		String logMessage = "Received SOAP response message with MessageID: " + messageIdValue + ", StatusCode: " + statusCode;
-		System.out.println(logMessage);
-		return true;
+	private String convertSoapMessageToString(SoapMessage soapMessage) {
+		TransformerFactory transformerFactory = TransformerFactory.newInstance();
+		Transformer transformer;
+		try {
+			transformer = transformerFactory.newTransformer();
+		} catch (TransformerException e) {
+			throw new RuntimeException("Failed to create transformer", e);
 		}
-		In the code above, the getProperty() method is used to retrieve the HTTP status code from the MessageContext object, and it is then converted to a string and added to the MDC context using
+		StringWriter writer = new StringWriter();
+		try {
+			transformer.transform(new DOMSource(soapMessage.getEnvelope().getSource()), new StreamResult(writer));
+		} catch (TransformerException e) {
+			throw new RuntimeException("Failed to transform SOAP message", e);
+		}
+		return writer.toString();
+	}
+}
 
 
+	@Override
+	public boolean handleResponse(MessageContext messageContext) {
+		SoapMessage soapMessage = (SoapMessage) messageContext.getResponse();
+		String soapResponse = convertSoapMessageToString(soapMessage);
 
+		// Get the HTTP response code
+		Integer httpResponseCode = (Integer) messageContext.getResponse().getProperty(MessageContext.HTTP_RESPONSE_CODE);
+		if (httpResponseCode != null) {
+			// Add the HTTP response code to the MDC
+			MDC.put("httpResponseCode", httpResponseCode.toString());
+		}
+
+		// Log the SOAP response
+		logger.debug("SOAP response: {}", soapResponse);
+
+		return super.handleResponse(messageContext);
+	}
