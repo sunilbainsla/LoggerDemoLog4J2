@@ -74,3 +74,42 @@ public class SoapRequestInterceptor extends ClientInterceptorAdapter {
 
 		return super.handleResponse(messageContext);
 	}
+
+
+	import org.junit.Test;
+			import org.mockito.ArgumentCaptor;
+			import org.mockito.Captor;
+			import org.mockito.MockitoAnnotations;
+			import org.springframework.ws.client.core.WebServiceTemplate;
+			import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
+			import org.springframework.ws.context.MessageContext;
+			import org.springframework.ws.soap.SoapMessage;
+			import static org.mockito.Mockito.*;
+		import static org.junit.Assert.*;
+
+public class SoapRequestInterceptorTest {
+
+	@Captor
+	private ArgumentCaptor<MessageContext> messageContextCaptor;
+
+	@Test
+	public void testSoapRequestInterceptor() throws Exception {
+		// Mock the soap message and message context
+		SoapMessage soapMessage = mock(SoapMessage.class);
+		MessageContext messageContext = mock(MessageContext.class);
+		when(messageContext.getRequest()).thenReturn(soapMessage);
+
+		// Create an instance of SoapRequestInterceptor
+		SoapRequestInterceptor soapRequestInterceptor = new SoapRequestInterceptor();
+
+		// Call handleRequest method
+		boolean result = soapRequestInterceptor.handleRequest(messageContext);
+		assertTrue(result);
+
+		// Verify that the SOAP request is logged
+		verify(soapMessage, times(1)).getEnvelope();
+		verify(messageContext, times(1)).getRequest();
+		verify(messageContext, times(1)).setRequest(any(SoapMessage.class));
+	}
+
+}
