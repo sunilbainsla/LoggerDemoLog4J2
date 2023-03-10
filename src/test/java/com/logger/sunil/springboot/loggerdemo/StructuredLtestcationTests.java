@@ -113,3 +113,69 @@ public class SoapRequestInterceptorTest {
 	}
 
 }
+
+import static org.junit.Assert.assertEquals;
+		import org.junit.Before;
+		import org.junit.Test;
+
+public class SoapMessageConverterTest {
+
+	private SoapMessage testMessage;
+	private SoapMessageConverter converter;
+
+	@Before
+	public void setUp() {
+		// Initialize a test SoapMessage object
+		testMessage = new SoapMessage();
+		testMessage.setEnvelope(new SoapEnvelope());
+		testMessage.getEnvelope().setBody(new SoapBody());
+		testMessage.getEnvelope().getBody().addContent("<message>Hello world</message>");
+
+		// Initialize the converter
+		converter = new SoapMessageConverter();
+	}
+
+	@Test
+	public void testConvertEmptyMessage() {
+		SoapMessage emptyMessage = new SoapMessage();
+		emptyMessage.setEnvelope(new SoapEnvelope());
+
+		String result = converter.convertSoapMessageToString(emptyMessage);
+		assertEquals("<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body/></soap:Envelope>", result);
+	}
+
+	@Test
+	public void testConvertSimpleMessage() {
+		String expected = "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body><message>Hello world</message></soap:Body></soap:Envelope>";
+
+		String result = converter.convertSoapMessageToString(testMessage);
+		assertEquals(expected, result);
+	}
+
+	@Test
+	public void testConvertComplexMessage() {
+		testMessage.getEnvelope().getBody().addContent("<details><name>John Doe</name><age>30</age></details>");
+
+		String expected = "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body><message>Hello world</message><details><name>John Doe</name><age>30</age></details></soap:Body></soap:Envelope>";
+
+		String result = converter.convertSoapMessageToString(testMessage);
+		assertEquals(expected, result);
+	}
+
+	@Test(expected = RuntimeException.class)
+	public void testConvertInvalidMessage() {
+		// Create an invalid message by setting an invalid namespace on the envelope
+		testMessage.getEnvelope().setNamespace("invalid-namespace");
+
+		converter.convertSoapMessageToString(testMessage);
+	}
+
+	@Test(expected = RuntimeException.class)
+	public void testConvertNonXmlMessage() {
+		// Create a non-XML message by setting a string content on the body
+		testMessage.getEnvelope().getBody().setContent("Hello world");
+
+		converter.convertSoapMessageToString(testMessage);
+	}
+
+}
