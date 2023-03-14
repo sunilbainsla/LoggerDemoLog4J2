@@ -36,5 +36,6 @@ public void processMessage(String topicName, String message) {
 
         messageProcessor.processMessage("PFFC-ACS", "A new sports team has been formed!");
         messageProcessor.processMessage("PFFC", "The election results are in!");
+        messageProcessor.processMessage("changelog", "The election results are in!");
     }
 }

@@ -10,6 +10,7 @@ public class Utils {
     {
         registerHandler("^PFFC-ACS.*", new ACSTopicHandler());
         registerHandler(".*NOTIFICATION.*", new NotificationTopicHandler());
+        registerHandler(".*changelog.*", new NoMDCTopicHandler());
         return handlers;
     }
     public  static void registerHandler(String topicRegex, TopicHandler handler) {
