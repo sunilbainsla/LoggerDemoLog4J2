@@ -1,1 +1,41 @@
+spring:
+  cloud:
+    stream:
+      bindings:
+        topicConsumer-IN-0:
+          destination: input-topic
+          group: consumer-group
+          consumer:
+            max-attempts: 5
+            backoff-initial-interval: 1000
+            backoff-max-interval: 5000
+            backoff-multiplier: 2
+          listener:
+            concurrency: 1
 
+spring:
+  cloud:
+    stream:
+      bindings:
+        topicProducer-OUT-0:
+          destination: output-topic
+          producer:
+            retries: 3
+            max-in-flight: 1
+            error-channel-enabled: true
+            value-serde: org.apache.kafka.common.serialization.StringSerializer
+            key-serde: org.apache.kafka.common.serialization.StringSerializer
+            header-mode: headers
+            configuration:
+              acks: all
+              buffer-memory: 33554432
+              compression-type: snappy
+              retries: 3
+              max-block-ms: 10000
+              request-timeout-ms: 30000
+              retry-backoff-ms: 5000
+              max-in-flight-requests-per-connection: 1
+              linger-ms: 100
+              # Configure retry for specific exception
+              retry:
+                retryable-exceptions: org.apache.kafka.common.errors.RetriableException
