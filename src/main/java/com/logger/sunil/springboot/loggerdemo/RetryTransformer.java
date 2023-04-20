@@ -1,35 +1,50 @@
 package com.logger.sunil.springboot.loggerdemo;
 
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.kstream.ValueTransformer;
-import org.apache.kafka.streams.processor.ProcessorContext;
-import org.springframework.retry.RetryCallback;
-import org.springframework.retry.RetryContext;
-import org.springframework.retry.support.RetryTemplate;
+public class RetryTransformer implements Transformer<Object, Object, KeyValue<Object, Object>> {
 
-public class RetryTransformer<V> implements ValueTransformer<V, V> {
-    private final RetryTemplate retryTemplate;
+    private static final Logger LOGGER = LoggerFactory.getLogger(RetryTransformer.class);
 
-    public RetryTransformer(RetryTemplate retryTemplate) {
-        this.retryTemplate = retryTemplate;
-    }
+    private int maxAttempts = -1;
+    private int retryCount = 0;
 
     @Override
     public void init(ProcessorContext context) {
-        // No initialization required
     }
 
     @Override
-    public V transform(V value) {
+    public KeyValue<Object, Object> transform(Object key, Object value) {
         try {
-            return retryTemplate.execute((RetryCallback<V, RuntimeException>) context -> value);
-        } catch (Exception e) {
-            throw new RuntimeException("Retry failed after exhausting all attempts", e);
+            // process the message here
+            return KeyValue.pair(key, value);
+        } catch (Exception ex) {
+            if (ex instanceof KafkaException) {
+                if (maxAttempts == -1 || retryCount < maxAttempts) {
+                    LOGGER.warn("Caught KafkaException: {}. Retrying...", ex.getMessage());
+                    retryCount++;
+                    throw new RetryException(ex.getMessage());
+                } else {
+                    LOGGER.error("Reached max retry attempts. Sending to DLQ.");
+                    // throw to DLQ here
+                }
+            } else {
+                LOGGER.error("Caught non-KafkaException. Sending to DLQ.", ex);
+                // throw to DLQ here
+            }
+            return null;
         }
     }
 
     @Override
     public void close() {
-        // No resources to release
+    }
+
+    public void setMaxAttempts(int maxAttempts) {
+        this.maxAttempts = maxAttempts;
+    }
+
+    public static class RetryException extends RuntimeException {
+        public RetryException(String message) {
+            super(message);
+        }
     }
 }
