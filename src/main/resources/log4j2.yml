@@ -26,3 +26,11 @@ Configuration:
       level: "info"
       AppenderRef:
         ref: "ConsoleAppender"
+
+
+    "key": "timestamp"
+      "value": "${dynamicTimestamp:yyyy-MM-dd HH:mm:ss.SSS}"
+  Plugins:
+    Plugin:
+      name: "dynamicTimestamp"
+      class: "com.example.DynamicTimestampPlugin"
